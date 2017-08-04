@@ -5,12 +5,13 @@
     android:id="@+id/content_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.yjkmust.arcgisdemo.MainActivity"
     tools:showIn="@layout/app_bar_main">
     <FrameLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
+        android:layout_weight="2"
         android:layout_height="match_parent">
         <com.esri.android.map.MapView
             android:id="@+id/map_view"
@@ -18,6 +19,7 @@
             android:layout_height="match_parent">
         </com.esri.android.map.MapView>
         <LinearLayout
+            android:id="@+id/ll_content"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:orientation="horizontal"
@@ -41,6 +43,42 @@
         </LinearLayout>
 
     </FrameLayout>
+    <LinearLayout
+        android:id="@+id/ll_queryResult"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/Red"
+            android:padding="10dp">
+            <Button
+                android:id="@+id/btnClear"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="@drawable/ic_clear_black_24dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="标注查询结果"
+                android:layout_gravity="center"
+                android:textColor="#fff"
+                android:gravity="center"/>
+        </LinearLayout>
+
+        <com.baoyz.swipemenulistview.SwipeMenuListView
+            android:id="@+id/lstView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:choiceMode="singleChoice"
+            android:clickable="true">
+
+        </com.baoyz.swipemenulistview.SwipeMenuListView>
+
+    </LinearLayout>
 
 
 </LinearLayout>

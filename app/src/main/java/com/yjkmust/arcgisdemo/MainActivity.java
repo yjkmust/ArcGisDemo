@@ -20,8 +20,11 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +33,8 @@ import com.esri.android.map.MapOnTouchListener;
 import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISLocalTiledLayer;
 import com.esri.core.geometry.Geometry;
+import com.esri.core.geometry.GeometryEngine;
+import com.esri.core.geometry.MapGeometry;
 import com.esri.core.geometry.MultiPath;
 import com.esri.core.geometry.Point;
 import com.esri.core.geometry.Polygon;
@@ -41,8 +46,15 @@ import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.core.symbol.TextSymbol;
 import com.klinker.android.link_builder.Link;
 import com.klinker.android.link_builder.LinkBuilder;
+import com.yjkmust.arcgisdemo.Bean.MapQueryResultModel;
+import com.yjkmust.arcgisdemo.Bean.MarkLayerDb;
+import com.yjkmust.arcgisdemo.Utils.DbUtils;
 import com.yjkmust.arcgisdemo.Utils.Utility;
 
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,6 +67,7 @@ public class MainActivity extends AppCompatActivity
     private String TAG = "MainActivity";
     private MapView mMapView;
     private GraphicsLayer graphicsLayer;
+    private GraphicsLayer markLayer;
     final int STATE_ADD_LAYER = 1;//进入添加graphic状态
     final int STATE_SHOW = 2;//选中graphic状态，这是后单击地图操作
     int m_state;//状态
@@ -64,6 +77,8 @@ public class MainActivity extends AppCompatActivity
     private Polygon drawPolygon;
     private TextView textView;
     private ImageView imageView;
+    private LinearLayout linearLayout;
+    private LinearLayout llqueryResult;
     private MapOption mapOption = MapOption.nothing;
     private final int SIZE_CLICK_POINT = 30;
     private final SimpleMarkerSymbol SYMBOL_CLICK_POINT =
@@ -89,6 +104,8 @@ public class MainActivity extends AppCompatActivity
             setOffsetY(-5);
         }
     };
+    private DbUtils dbUtils;
+    private Button btnClear;
 
 
     @Override
@@ -97,11 +114,19 @@ public class MainActivity extends AppCompatActivity
        setContentView(R.layout.activity_main);
         textView = (TextView) findViewById(R.id.tv_display);
         imageView = (ImageView) findViewById(R.id.iv_image);
-
+        linearLayout = (LinearLayout) findViewById(R.id.ll_content);
+        llqueryResult = (LinearLayout) findViewById(R.id.ll_queryResult);
+        btnClear = (Button) findViewById(R.id.btnClear);
+        btnClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                llqueryResult.setVisibility(View.GONE);
+            }
+        });
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        dbUtils = DbUtils.getDbUtils(this);
         initMapView();
-
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -350,21 +375,14 @@ public class MainActivity extends AppCompatActivity
             // 切换按钮状态，第一次点击本按钮后进入 “添加graphics状态，这时候单击地图时操作就添加graphics”
             // 第一次点击本按钮后进入 “选中graphics状态“，这时候单击地图时操作就
             // 选择一个graphics，并显示该graphics的附加信息”
-            m_state = m_state == STATE_ADD_LAYER ? STATE_SHOW
-                    : STATE_ADD_LAYER;
-            if (m_state == STATE_ADD_LAYER) {
-                textView.setText(getString(R.string.option_map_mark_point));
-                LinkBuilder.on(textView)
-                        .addLinks(makeLinksForMarker(item))
-                        .build();
-                mapOption=MapOption.point;
-            } else {
-                textView.setText("不添加要素");
-                imageView.setImageResource(R.drawable.ic_marker_point);
-                mapOption=MapOption.nothing;
-            }
+            textView.setText(getString(R.string.option_map_mark_point));
+            LinkBuilder.on(textView)
+                    .addLinks(makeLinksForMarker(item))
+                    .build();
+            mapOption=MapOption.point;
             currentDrawGraphicId = -1;
             mapOption = point;
+            linearLayout.setVisibility(View.VISIBLE);
             graphicsLayer.removeAll();
             Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_line) {
@@ -372,6 +390,7 @@ public class MainActivity extends AppCompatActivity
             mapOption = MapOption.line;
             imageView.setImageResource(R.drawable.ic_marker_line);
             textView.setText(getString(R.string.option_map_mark_polyline));
+            linearLayout.setVisibility(View.VISIBLE);
             LinkBuilder.on(textView)
                     .addLinks(makeLinksForMarker(item))
                     .build();
@@ -386,13 +405,16 @@ public class MainActivity extends AppCompatActivity
                     .addLinks(makeLinksForMarker(item))
                     .build();
             imageView.setImageResource(R.drawable.ic_marker_polygon);
+            linearLayout.setVisibility(View.VISIBLE);
             graphicsLayer.removeAll();
             Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_query) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.query;
             textView.setText("查询标注");
+            inputMarkKey();
             graphicsLayer.removeAll();
+            linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_marker_clear);
             Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_distance) {
@@ -400,6 +422,7 @@ public class MainActivity extends AppCompatActivity
             mapOption = MapOption.distance;
             textView.setText("距离测量");
             graphicsLayer.removeAll();
+            linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_measure_length);
             Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_area) {
@@ -407,10 +430,18 @@ public class MainActivity extends AppCompatActivity
             mapOption = MapOption.area;
             textView.setText("面积测量");
             graphicsLayer.removeAll();
+            linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_measure_area);
             Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+        }else if (id == R.id.nav_clear) {
+            currentDrawGraphicId = -1;
+            mapOption = MapOption.nothing;
+            graphicsLayer.removeAll();
+            markLayer.removeAll();
+            linearLayout.setVisibility(View.GONE);
+            dbUtils.DelAllMarkLayer();
+            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
         }
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
@@ -424,6 +455,9 @@ public class MainActivity extends AppCompatActivity
         //将离线地图加载到MapView中
         mMapView.addLayer(localMap);
         graphicsLayer = new GraphicsLayer();
+        markLayer = new GraphicsLayer();
+        reLaodLayer();
+        mMapView.addLayer(markLayer);
         mMapView.addLayer(graphicsLayer);
         mapTouch();
     }
@@ -477,6 +511,12 @@ public class MainActivity extends AppCompatActivity
                 .setOnClickListener(new Link.OnClickListener() {
                     @Override
                     public void onClick(String clickedText) {
+                        clearMark();
+                        SaveMarkers();
+                        graphicsLayer.removeAll();
+                        reLaodLayer();
+                        linearLayout.setVisibility(View.GONE);
+                        mapOption = MapOption.nothing;
 //                        stopAndSaveMarkers(menuItem);
                     }
                 });
@@ -595,4 +635,161 @@ public class MainActivity extends AppCompatActivity
         currentDrawGraphicLabelId = -1;
         graphicsLayer.clearSelection();
     }
+    /**
+     * 保存标注数据
+     */
+    public void  SaveMarkers(){
+        List<Graphic> graphics = new ArrayList<>();
+        for (int id : graphicsLayer.getGraphicIDs()){
+           if (graphicsLayer.getGraphic(id).getSymbol() instanceof TextSymbol){
+               continue;
+           }
+            graphics.add(graphicsLayer.getGraphic(id));
+        }
+        for (Graphic graphic : graphics){
+            MarkLayerDb db = new MarkLayerDb();
+            Object labelText = graphic.getAttributes().containsKey("LabelText") ? graphic.getAttributes().get("LabelText") : "";
+            Object shapeJson = GeometryEngine.geometryToJson(graphic.getSpatialReference(), graphic.getGeometry());
+            db.setLabelText((String) labelText);
+            db.setShapeJson((String) shapeJson);
+            dbUtils.insertMarkLayer(db);
+        }
+    }
+    /**
+     * 获取数据库Layer
+     */
+    private void reLaodLayer(){
+        if (markLayer==null){
+            return;
+        }
+        markLayer.removeAll();
+        List<MarkLayerDb> list = dbUtils.loadAllMarkLayer();
+        for (MarkLayerDb db : list){
+            JsonFactory jsonFactory = new JsonFactory();
+            JsonParser jsonParser = null;
+            try {
+                jsonParser = jsonFactory.createJsonParser(db.getShapeJson());
+            }catch (IOException e){
+                e.printStackTrace();
+                continue;
+            }
+            MapGeometry mapGeometry = GeometryEngine.jsonToGeometry(jsonParser);
+            Geometry geometry = mapGeometry.getGeometry();
+            Map<String, Object> attributes = new HashMap<>();
+            attributes.put("ID", db.getID());
+            attributes.put("LabelText", db.getLabelText());
+            Graphic graphic = null;
+            Geometry labelPoint = null;
+            if (geometry.getType()==Geometry.Type.POINT){
+                graphic = new Graphic(geometry, SYMBOL_POINT_DEFAULT, attributes);
+                labelPoint = geometry.copy();
+            }else if (geometry.getType() == Geometry.Type.POLYLINE){
+                graphic = new Graphic(geometry, SYMBOL_LINE_DEFAULT, attributes);
+                labelPoint = ((MultiPath)geometry).getPoint(0).copy();
+            } else if (geometry.getType() == Geometry.Type.POLYGON){
+                graphic = new Graphic(geometry, SYMBOL_FILL_DEFAULT, attributes);
+                labelPoint = ((MultiPath)geometry).getPoint(0).copy();
+            }else{
+                continue;
+            }
+            int graphicId = markLayer.addGraphic(graphic);
+            if (db.getLabelText() != null && db.getLabelText().length() > 0){
+                TextSymbol textSymbol = new TextSymbol(14, db.getLabelText(), Color.BLACK, TextSymbol.HorizontalAlignment.LEFT, TextSymbol.VerticalAlignment.MIDDLE);
+                textSymbol.setFontFamily("DroidSansFallback.ttf");
+                textSymbol.setOffsetX(5);
+                Map<String, Object> attrs = new HashMap<>();
+                attrs.put("GID", graphicId);
+                Graphic labelGraphic = new Graphic(labelPoint, textSymbol, attrs);
+                markLayer.addGraphic(labelGraphic);
+            }
+        }
+    }
+    private void clearMark(){
+        currentDrawGraphicId = -1;
+        currentDrawGraphicLabelId= -1;
+    }
+    /**
+     * 查询标注
+     */
+    /**
+     * 输入标注查询关键字
+     */
+    private void inputMarkKey() {
+        final View inputView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.auto_input_string, null);
+        final AutoCompleteTextView input = (AutoCompleteTextView) inputView.findViewById(R.id.text);
+        input.setHint("请输入标注关键字");
+        final AlertDialog dlg = new AlertDialog.Builder(MainActivity.this, R.style.Dialog_Custom)
+                .setIcon(getResources().getDrawable(R.drawable.ic_mode_edit_black_24dp))
+                .setTitle("查询标注")
+                .setView(inputView)
+                .setPositiveButton("确定", null)
+                .setNegativeButton("取消", null)
+                .create();
+        dlg.show();
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String label = input.getText().toString();
+                if (label.trim().length() <= 0) {
+                    input.setError("不能为空");
+                    return;
+                }
+                queryMarker(label.trim());
+                dlg.dismiss();
+            }
+        });
+        //设置输入框输入后的软键盘监听事件
+        input.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
+                if (id == EditorInfo.IME_ACTION_DONE) {
+                    String label = input.getText().toString();
+                    if (label.trim().length() <= 0) {
+                        input.setError("不能为空");
+                    } else {
+                        dlg.dismiss();
+                    }
+                }
+                return false;
+            }
+        });
+    }
+    private void queryMarker(final String key){
+        if (!markLayer.isVisible()) {
+            markLayer.setVisible(true);
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int index = 0;
+                final List<MapQueryResultModel> returnRes = new ArrayList<>();
+                if (markLayer.getGraphicIDs() != null) {
+                    for (int id : markLayer.getGraphicIDs()) {
+                        String label = markLayer.getGraphic(id).getAttributeValue("LabelText") != null
+                                ? markLayer.getGraphic(id).getAttributeValue("LabelText").toString()
+                                : "";
+                        if (label.length() > 0 && label.contains(key)) {
+                            MapQueryResultModel item = new MapQueryResultModel();
+                            item.setIndex(index);
+                            item.setText(label);
+                            item.setValue(id);
+                            returnRes.add(item);
+                            index++;
+                        }
+                    }
+                }
+               runOnUiThread(new Runnable() {
+                   @Override
+                   public void run() {
+                     if (returnRes.size()>0&&returnRes!=null){
+                         llqueryResult.setVisibility(View.VISIBLE);
+                     }else {
+                         Toast.makeText(MainActivity.this,"没有相关的标注记录",Toast.LENGTH_SHORT).show();
+                     }
+                   }
+               });
+            }
+        }).start();
+    }
+
 }

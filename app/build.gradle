@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.greenrobot.greendao'
 
 android {
     compileSdkVersion 26
@@ -22,6 +23,14 @@ android {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
     }
+    greendao{
+        schemaVersion 1
+        daoPackage'com.yjkmust.arcgisdemo.gen'
+        targetGenDir'src/main/java'
+    }
+    dataBinding{
+        enabled true
+    }
 }
 
 dependencies {
@@ -40,4 +49,7 @@ dependencies {
     compile files('libs/jcifs-1.3.17.jar')
     compile files('libs/Native_Libs2.jar')
     compile 'com.klinkerapps:link_builder:1.3.2'
+    compile 'org.greenrobot:greendao:3.2.0'
+    compile 'org.greenrobot:greendao-generator:3.1.0'
+    compile 'com.baoyz.swipemenulistview:library:1.3.0'
 }
