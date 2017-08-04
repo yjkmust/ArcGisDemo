@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">ArcGisDemo</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="option_map_mark_point">点标注：可在地图任意位置通过单个手指任意点选标注点，可点击补充说明对标注点添加或修改说明文字，可点击新增标注添加新的标注点。如要停止绘画并保存，请点击结束并保存。</string>
+    <string name="option_map_mark_polyline">线标注：可在地图任意位置通过单个手指任意点选标注线段端点，可点击补充说明对标注线添加或修改说明文字，可点击新增标注添加新的标注线。如要停止绘画并保存，请点击结束并保存。</string>
+    <string name="option_map_mark_polygon">面标注：可在地图任意位置通过单个手指任意点选标注面的顶点，可点击补充说明对标注面添加或修改说明文字，可点击新增标注添加新的标注面。如要停止绘画并保存，请点击结束并保存。</string>
+    <string name="option_map_measure_length">长度测量：可在地图任意位置通过单个手指任意点选测量线段端点。如要测量另外长度请点击新增测量。如要结束测量请点击结束并清除。</string>
+    <string name="option_map_measure_area">面积测量：可在地图任意位置通过单个手指任意点选测量面的顶点。如要测量另外面积请点击新增测量。如要结束测量请点击结束并清除。</string>
+</resources>

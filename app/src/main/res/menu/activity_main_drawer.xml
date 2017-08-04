@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_point"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="点标注" />
+        <item
+            android:id="@+id/nav_line"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="线标注" />
+        <item
+            android:id="@+id/nav_recover"
+            android:icon="@drawable/ic_menu_slideshow"
+            android:title="面标注" />
+        <item
+            android:id="@+id/nav_query"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="查询标注" />
+    </group>
+
+    <item android:title="计算">
+        <menu>
+            <item
+                android:id="@+id/nav_distance"
+                android:icon="@drawable/ic_menu_share"
+                android:title="距离计算" />
+            <item
+                android:id="@+id/nav_area"
+                android:icon="@drawable/ic_menu_send"
+                android:title="面积计算" />
+        </menu>
+    </item>
+
+</menu>
