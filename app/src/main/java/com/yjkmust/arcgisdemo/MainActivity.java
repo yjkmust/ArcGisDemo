@@ -1,7 +1,9 @@
 package com.yjkmust.arcgisdemo;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -20,18 +22,25 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.baoyz.swipemenulistview.SwipeMenu;
+import com.baoyz.swipemenulistview.SwipeMenuCreator;
+import com.baoyz.swipemenulistview.SwipeMenuItem;
+import com.baoyz.swipemenulistview.SwipeMenuListView;
 import com.esri.android.map.GraphicsLayer;
 import com.esri.android.map.MapOnTouchListener;
 import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISLocalTiledLayer;
+import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.geometry.GeometryEngine;
 import com.esri.core.geometry.MapGeometry;
@@ -46,6 +55,8 @@ import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.core.symbol.TextSymbol;
 import com.klinker.android.link_builder.Link;
 import com.klinker.android.link_builder.LinkBuilder;
+import com.yjkmust.arcgisdemo.Adapters.LayerVisibilityAdapter;
+import com.yjkmust.arcgisdemo.Adapters.QueryResultAdapter;
 import com.yjkmust.arcgisdemo.Bean.MapQueryResultModel;
 import com.yjkmust.arcgisdemo.Bean.MarkLayerDb;
 import com.yjkmust.arcgisdemo.Utils.DbUtils;
@@ -106,6 +117,7 @@ public class MainActivity extends AppCompatActivity
     };
     private DbUtils dbUtils;
     private Button btnClear;
+    private SwipeMenuListView listView;
 
 
     @Override
@@ -117,6 +129,7 @@ public class MainActivity extends AppCompatActivity
         linearLayout = (LinearLayout) findViewById(R.id.ll_content);
         llqueryResult = (LinearLayout) findViewById(R.id.ll_queryResult);
         btnClear = (Button) findViewById(R.id.btnClear);
+        listView = (SwipeMenuListView) findViewById(R.id.lstView);
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -127,6 +140,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
         dbUtils = DbUtils.getDbUtils(this);
         initMapView();
+        loadMapExtent();
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -144,7 +158,28 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+        listView.setMenuCreator(listMenuCreator);
     }
+    SwipeMenuCreator listMenuCreator = new SwipeMenuCreator() {
+
+        @Override
+        public void create(SwipeMenu menu) {
+            if (menu.getViewType() == 1) {
+                // create "delete" item
+                SwipeMenuItem deleteItem = new SwipeMenuItem(
+                        getApplicationContext());
+                // set item background
+                deleteItem.setBackground(new ColorDrawable(Color.rgb(0xF9,
+                        0x3F, 0x25)));
+                // set item width
+                deleteItem.setWidth(90);
+                // set a icon
+                deleteItem.setIcon(R.drawable.ic_clear_black_24dp);
+                // add to menu
+                menu.addMenuItem(deleteItem);
+            }
+        }
+    };
     private void mapTouch(){
        mMapView.setOnTouchListener(new MapTouchListener(getApplicationContext(),mMapView));
     }
@@ -366,7 +401,7 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(final MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
@@ -384,7 +419,7 @@ public class MainActivity extends AppCompatActivity
             mapOption = point;
             linearLayout.setVisibility(View.VISIBLE);
             graphicsLayer.removeAll();
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"点标注",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_line) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.line;
@@ -396,7 +431,7 @@ public class MainActivity extends AppCompatActivity
                     .build();
 
             graphicsLayer.removeAll();
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"线标注",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_recover) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.recover;
@@ -407,7 +442,7 @@ public class MainActivity extends AppCompatActivity
             imageView.setImageResource(R.drawable.ic_marker_polygon);
             linearLayout.setVisibility(View.VISIBLE);
             graphicsLayer.removeAll();
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"面标注",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_query) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.query;
@@ -416,7 +451,7 @@ public class MainActivity extends AppCompatActivity
             graphicsLayer.removeAll();
             linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_marker_clear);
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"查询标注",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_distance) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.distance;
@@ -424,7 +459,7 @@ public class MainActivity extends AppCompatActivity
             graphicsLayer.removeAll();
             linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_measure_length);
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"距离测量",Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_area) {
             currentDrawGraphicId = -1;
             mapOption = MapOption.area;
@@ -432,15 +467,41 @@ public class MainActivity extends AppCompatActivity
             graphicsLayer.removeAll();
             linearLayout.setVisibility(View.GONE);
             imageView.setImageResource(R.drawable.ic_measure_area);
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,"面积测量",Toast.LENGTH_SHORT).show();
         }else if (id == R.id.nav_clear) {
-            currentDrawGraphicId = -1;
-            mapOption = MapOption.nothing;
-            graphicsLayer.removeAll();
-            markLayer.removeAll();
-            linearLayout.setVisibility(View.GONE);
-            dbUtils.DelAllMarkLayer();
-            Toast.makeText(this,"1111",Toast.LENGTH_SHORT).show();
+            new AlertDialog.Builder(this, R.style.Dialog_Custom)
+                    .setIcon(getResources().getDrawable(R.drawable.ic_help_black_24dp))
+                    .setTitle("提示")
+                    .setMessage("是否确定要清除所有标注？")
+                    .setPositiveButton("清除", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            currentDrawGraphicId = -1;
+                            mapOption = MapOption.nothing;
+                            graphicsLayer.removeAll();
+                            markLayer.removeAll();
+                            linearLayout.setVisibility(View.GONE);
+                            dbUtils.DelAllMarkLayer();
+                            Toast.makeText(MainActivity.this,"清除标注",Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("取消", null)
+                    .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                        @Override
+                        public void onDismiss(DialogInterface dialogInterface) {
+                            item.setChecked(false);
+                        }
+                    })
+                    .create().show();
+
+        }else if (id==R.id.nav_layer){
+            ListView listView = new ListView(this);
+            listView.setAdapter(new LayerVisibilityAdapter(mMapView));
+            new AlertDialog.Builder(this, R.style.Dialog_Custom)
+                    .setView(listView)
+                    .setTitle("图层控制")
+                    .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
+                    .create().show();
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -453,9 +514,11 @@ public class MainActivity extends AppCompatActivity
         //声明并实例化ArcGISLocalTiledLayer
         ArcGISLocalTiledLayer localMap=new ArcGISLocalTiledLayer(path);
         //将离线地图加载到MapView中
+        localMap.setName("默认地图");
         mMapView.addLayer(localMap);
         graphicsLayer = new GraphicsLayer();
         markLayer = new GraphicsLayer();
+        markLayer.setName("标注图层");
         reLaodLayer();
         mMapView.addLayer(markLayer);
         mMapView.addLayer(graphicsLayer);
@@ -665,6 +728,10 @@ public class MainActivity extends AppCompatActivity
         markLayer.removeAll();
         List<MarkLayerDb> list = dbUtils.loadAllMarkLayer();
         for (MarkLayerDb db : list){
+            if (db.getData2()!=null&&!db.getData2().isEmpty()){
+                if (db.getData2().equals("地图视野"))
+                continue;
+            }
             JsonFactory jsonFactory = new JsonFactory();
             JsonParser jsonParser = null;
             try {
@@ -779,10 +846,50 @@ public class MainActivity extends AppCompatActivity
                     }
                 }
                runOnUiThread(new Runnable() {
+                   private QueryResultAdapter adapter;
+
                    @Override
                    public void run() {
                      if (returnRes.size()>0&&returnRes!=null){
                          llqueryResult.setVisibility(View.VISIBLE);
+                         markLayer.clearSelection();
+                         adapter = new QueryResultAdapter(returnRes, true);
+                         listView.setAdapter(adapter);
+                         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                             @Override
+                             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                                 MapQueryResultModel selectItem = (MapQueryResultModel) adapter.getItem(i);
+                                 selectMarkerGraphic((int) selectItem.getValue());
+                             }
+                         });
+                         listView.setOnMenuItemClickListener(new SwipeMenuListView.OnMenuItemClickListener() {
+                             @Override
+                             public boolean onMenuItemClick(final int position, SwipeMenu menu, int index) {
+                                 final MapQueryResultModel model = (MapQueryResultModel) adapter.getItem(position);
+                                 switch (index){
+                                     case 0:
+                                         new AlertDialog.Builder(MainActivity.this, R.style.Dialog_Custom)
+                                                 .setIcon(getResources().getDrawable(R.drawable.ic_help_black_24dp))
+                                                 .setTitle("提示")
+                                                 .setMessage("是否要删除该标注？")
+                                                 .setPositiveButton("是", new DialogInterface.OnClickListener() {
+                                                     @Override
+                                                     public void onClick(DialogInterface dialogInterface, int i) {
+                                                        deleteMarker(new int[]{(Integer) model.getValue()});
+                                                         adapter.deleteItem(position);
+                                                     }
+                                                 })
+                                                 .setNegativeButton("否", null)
+                                                 .create().show();
+                                         break;
+                                     default:
+                                         break;
+
+                                 }
+                                 return false;
+                             }
+                         });
+
                      }else {
                          Toast.makeText(MainActivity.this,"没有相关的标注记录",Toast.LENGTH_SHORT).show();
                      }
@@ -791,5 +898,94 @@ public class MainActivity extends AppCompatActivity
             }
         }).start();
     }
+    private void selectMarkerGraphic(int id){
+        markLayer.clearSelection();
+        if (markLayer.getGraphic(id)!=null){
+            markLayer.setSelectedGraphics(new int[]{id},true);
+            Envelope envelope = new Envelope();
+            markLayer.getGraphic(id).getGeometry().queryEnvelope(envelope);
+            mMapView.setExtent(envelope);
+        }
+    }
+    /**
+     * 删除标注
+     *
+     * @param ids
+     */
+    public void deleteMarker(int[] ids) {
+        if (ids == null) {
+            return;
+        }
+        List<Long> lstId = new ArrayList<>();
+        for (int id : ids) {
+            lstId.add((Long) markLayer.getGraphic(id).getAttributeValue("ID"));
+        }
+        dbUtils.deleteOnes(lstId);
+//        new LayerService().deleteMarker(lstId);
+        markLayer.removeGraphics(ids);
+        if (markLayer.getGraphicIDs() != null) {
+            for (int id : markLayer.getGraphicIDs()) {
+                Graphic g = markLayer.getGraphic(id);
+                if (g.getAttributes().containsKey("GID")) {
+                    for (int gid : ids) {
+                        if (gid == (int) g.getAttributeValue("GID")) {
+                            markLayer.removeGraphic(id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * 保存地图视野
+     */
+    public void saveMapExtent() {
 
+            Geometry geo = mMapView.getExtent();
+            if (geo != null && geo.isValid() && !geo.isEmpty()) {
+                final String json = GeometryEngine.geometryToJson(mMapView.getSpatialReference(), geo);
+                MarkLayerDb markLayerDb = new MarkLayerDb();
+                markLayerDb.setData1(json);
+                markLayerDb.setData2("地图视野");
+                dbUtils.deleteMap("地图视野");
+                dbUtils.insertMarkLayer(markLayerDb);
+            }
+    }
+    /**
+     * 加载地图视野
+     */
+    public void loadMapExtent() {
+        List<MarkLayerDb> list = dbUtils.QureyBuilderByMap("地图视野");
+        if (list.size()>0&&list!=null){
+            String jsonExtent = list.get(0).getData1();
+            if (jsonExtent != null && jsonExtent.length() > 0) {
+                Geometry geo = Utility.json2Geometry(jsonExtent);
+                if (geo != null && geo.isValid() && !geo.isEmpty()) {
+                    mMapView.setExtent(geo);
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            new AlertDialog.Builder(this, R.style.Dialog_Custom)
+                    .setTitle("提示")
+                    .setIcon(R.drawable.ic_warning_black_24dp)
+                    .setMessage("确定要退出应用吗？")
+                    .setPositiveButton("是", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            //保存当前视野
+                            saveMapExtent();
+                            finish();
+                        }
+                    })
+                    .setNegativeButton("否", null)
+                    .create().show();
+            return false;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 }

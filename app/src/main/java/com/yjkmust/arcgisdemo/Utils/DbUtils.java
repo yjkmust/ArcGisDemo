@@ -48,10 +48,24 @@ public class DbUtils {
 
     }
     /**
+     * g根据ID批量删除数据
+     */
+    public void deleteOnes(List<Long> lists){
+        for (Long list : lists){
+            dbDao.deleteByKey(list);
+        }
+    }
+
+    /**
      * 根据用户类删除信息
      */
     public void deleteMarkLayer(String labeltext){
         List<MarkLayerDb> list = dbDao.queryBuilder().where(MarkLayerDbDao.Properties.LabelText.eq(labeltext)).build().list();
+        dbDao.deleteInTx(list);
+//        userDao.delete(user);
+    }
+    public void deleteMap(String mapview){
+        List<MarkLayerDb> list = dbDao.queryBuilder().where(MarkLayerDbDao.Properties.Data2.eq(mapview)).build().list();
         dbDao.deleteInTx(list);
 //        userDao.delete(user);
     }
@@ -91,6 +105,11 @@ public class DbUtils {
      */
     public List<MarkLayerDb> QureyBuilder(MarkLayerDb user){
         List<MarkLayerDb> list = dbDao.queryBuilder().where(MarkLayerDbDao.Properties.LabelText.eq(user.getLabelText()), MarkLayerDbDao.Properties.ShapeJson.eq(user.getShapeJson())).orderAsc(MarkLayerDbDao.Properties.ID)
+                .build().list();
+        return list;
+    }
+    public List<MarkLayerDb> QureyBuilderByMap(String user){
+        List<MarkLayerDb> list = dbDao.queryBuilder().where(MarkLayerDbDao.Properties.Data2.eq(user))
                 .build().list();
         return list;
     }

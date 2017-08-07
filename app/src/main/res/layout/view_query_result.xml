@@ -16,7 +16,7 @@
     </LinearLayout>
 
     <com.baoyz.swipemenulistview.SwipeMenuListView
-        android:id="@+id/lstView"
+        android:id="@+id/lstsView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:choiceMode="singleChoice"

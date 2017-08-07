@@ -36,5 +36,13 @@
                 android:title="面积计算" />
         </menu>
     </item>
+    <item android:title="图层">
+        <menu>
+            <item
+                android:id="@+id/nav_layer"
+                android:icon="@drawable/ic_menu_share"
+                android:title="图层控制" />
+        </menu>
+    </item>
 
 </menu>
