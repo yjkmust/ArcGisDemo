@@ -24,10 +24,19 @@ public class DaoManger extends Application {
     }
     public static DaoMaster getDaoMaster(Context context){
         if (daoMaster==null){
-
-            DaoMaster.DevOpenHelper dbtest = new DaoMaster.DevOpenHelper(context, "dbtest", null);
-            SQLiteDatabase writableDatabase = dbtest.getWritableDatabase();
-            daoMaster = new DaoMaster(writableDatabase);
+            /**
+             * 指定数据库文件生成目录,重写ContextWrapper类
+             */
+            DataBaseContext mContext = new DataBaseContext(context);
+            DaoMaster.DevOpenHelper dbtests = new DaoMaster.DevOpenHelper(mContext, "demo.db", null);
+            SQLiteDatabase writableDatabase1 = dbtests.getWritableDatabase();
+            daoMaster = new DaoMaster(writableDatabase1);
+            /**
+             * 默认数据库文件生成目录
+             */
+//            DaoMaster.DevOpenHelper dbtest = new DaoMaster.DevOpenHelper(context, "dbtest", null);
+//            SQLiteDatabase writableDatabase = dbtest.getWritableDatabase();
+//            daoMaster = new DaoMaster(writableDatabase);
         }
         return daoMaster;
     }
