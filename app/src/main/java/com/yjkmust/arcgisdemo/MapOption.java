@@ -11,5 +11,6 @@ public enum MapOption {
     recover,
     query,
     distance,
-    area
+    area,
+    queryArea
 }

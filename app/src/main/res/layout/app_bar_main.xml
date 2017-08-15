@@ -23,12 +23,57 @@
 
     <include layout="@layout/content_main" />
 
+    <ImageView
+        android:id="@+id/iv_location"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@mipmap/img_location_f" />
+    <ImageView
+        android:id="@+id/iv_measure"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@mipmap/img_mes"
+        android:onClick="showPopupWIndow"
+        android:layout_gravity="center|right"
+
+        android:layout_marginRight="10dp"/>
+
+    <RelativeLayout
+        android:id="@+id/rl_zoom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginRight="10dp">
+
+        <ImageView
+            android:id="@+id/iv_up"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom|end"
+            android:onClick="mapDown"
+            android:src="@mipmap/img_zoom_out" />
+
+        <ImageView
+            android:id="@+id/iv_down"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_below="@id/iv_up"
+            android:onClick="mapUp"
+            android:layout_gravity="bottom|end"
+            android:src="@mipmap/img_zoom_in" />
+
+    </RelativeLayout>
+
+
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
+        android:visibility="gone"
         app:srcCompat="@android:drawable/ic_dialog_email" />
 
 </android.support.design.widget.CoordinatorLayout>

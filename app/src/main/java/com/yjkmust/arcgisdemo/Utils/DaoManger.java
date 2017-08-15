@@ -24,6 +24,7 @@ public class DaoManger extends Application {
     }
     public static DaoMaster getDaoMaster(Context context){
         if (daoMaster==null){
+
             DaoMaster.DevOpenHelper dbtest = new DaoMaster.DevOpenHelper(context, "dbtest", null);
             SQLiteDatabase writableDatabase = dbtest.getWritableDatabase();
             daoMaster = new DaoMaster(writableDatabase);

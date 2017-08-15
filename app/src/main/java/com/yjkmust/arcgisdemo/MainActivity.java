@@ -2,9 +2,11 @@ package com.yjkmust.arcgisdemo;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -26,9 +28,12 @@ import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,10 +41,13 @@ import com.baoyz.swipemenulistview.SwipeMenu;
 import com.baoyz.swipemenulistview.SwipeMenuCreator;
 import com.baoyz.swipemenulistview.SwipeMenuItem;
 import com.baoyz.swipemenulistview.SwipeMenuListView;
+import com.esri.android.map.FeatureLayer;
 import com.esri.android.map.GraphicsLayer;
 import com.esri.android.map.MapOnTouchListener;
 import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISLocalTiledLayer;
+import com.esri.core.geodatabase.ShapefileFeature;
+import com.esri.core.geodatabase.ShapefileFeatureTable;
 import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.geometry.GeometryEngine;
@@ -48,28 +56,45 @@ import com.esri.core.geometry.MultiPath;
 import com.esri.core.geometry.Point;
 import com.esri.core.geometry.Polygon;
 import com.esri.core.geometry.Polyline;
+import com.esri.core.map.FeatureResult;
 import com.esri.core.map.Graphic;
+import com.esri.core.renderer.Renderer;
+import com.esri.core.renderer.SimpleRenderer;
 import com.esri.core.symbol.SimpleFillSymbol;
 import com.esri.core.symbol.SimpleLineSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.core.symbol.TextSymbol;
+import com.esri.core.tasks.SpatialRelationship;
+import com.esri.core.tasks.query.QueryParameters;
 import com.klinker.android.link_builder.Link;
 import com.klinker.android.link_builder.LinkBuilder;
+import com.yjkmust.arcgisdemo.Adapters.ExPandAdapter;
+import com.yjkmust.arcgisdemo.Adapters.ExPandableAdapter;
 import com.yjkmust.arcgisdemo.Adapters.LayerVisibilityAdapter;
 import com.yjkmust.arcgisdemo.Adapters.QueryResultAdapter;
+import com.yjkmust.arcgisdemo.Bean.Attubides;
 import com.yjkmust.arcgisdemo.Bean.MapQueryResultModel;
 import com.yjkmust.arcgisdemo.Bean.MarkLayerDb;
+import com.yjkmust.arcgisdemo.Bean.PipelineModel;
+import com.yjkmust.arcgisdemo.Bean.QueryResultModel;
+import com.yjkmust.arcgisdemo.Option.GPSOptionClass;
 import com.yjkmust.arcgisdemo.Utils.DbUtils;
+import com.yjkmust.arcgisdemo.Utils.LayerUtils;
+import com.yjkmust.arcgisdemo.Utils.PixelUtils;
 import com.yjkmust.arcgisdemo.Utils.Utility;
 
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import static com.yjkmust.arcgisdemo.MapOption.point;
 
@@ -118,6 +143,17 @@ public class MainActivity extends AppCompatActivity
     private DbUtils dbUtils;
     private Button btnClear;
     private SwipeMenuListView listView;
+    private ExpandableListView exListView;
+    private LinearLayout llqueryResultArea;
+    private Button btnClearArea;
+    private Point searchPoint;
+    private List<FeatureLayer> featureLayers;
+    private GraphicsLayer locationLayer;
+    private GPSOptionClass gpsOptionClass;
+    private ImageView ivLocation;
+    private RelativeLayout rlZoom;
+    private PopupWindow popupWindow;
+    private ImageView ivMeasure;
 
 
     @Override
@@ -126,22 +162,46 @@ public class MainActivity extends AppCompatActivity
        setContentView(R.layout.activity_main);
         textView = (TextView) findViewById(R.id.tv_display);
         imageView = (ImageView) findViewById(R.id.iv_image);
+        ivLocation = (ImageView) findViewById(R.id.iv_location);
         linearLayout = (LinearLayout) findViewById(R.id.ll_content);
         llqueryResult = (LinearLayout) findViewById(R.id.ll_queryResult);
+        llqueryResultArea = (LinearLayout) findViewById(R.id.ll_queryResultArea);
+        rlZoom = (RelativeLayout) findViewById(R.id.rl_zoom);
         btnClear = (Button) findViewById(R.id.btnClear);
+        btnClearArea = (Button) findViewById(R.id.btnClears);
         listView = (SwipeMenuListView) findViewById(R.id.lstView);
+        exListView = (ExpandableListView) findViewById(R.id.exListView);
+        ivMeasure = (ImageView) findViewById(R.id.iv_measure);
+
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 llqueryResult.setVisibility(View.GONE);
+                rlZoom.setVisibility(View.VISIBLE);
+            }
+        });
+        btnClearArea.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                llqueryResultArea.setVisibility(View.GONE);
+                rlZoom.setVisibility(View.VISIBLE);
+            }
+        });
+        ivMeasure.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int x = PixelUtils.getInstance().dp2Px(getResources(),-250);
+                int y = PixelUtils.getInstance().dp2Px(getResources(), -75);
+                popupWindow.showAsDropDown(ivMeasure,x,y);
             }
         });
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         dbUtils = DbUtils.getDbUtils(this);
+        featureLayers = new ArrayList<>();
         initMapView();
         loadMapExtent();
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -159,6 +219,29 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         listView.setMenuCreator(listMenuCreator);
+        ivLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!isLocation){
+                    if (!gpsOptionClass.isOpened()){
+                        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(intent);
+                        isLocation = false;
+                        ivLocation.setImageResource(R.mipmap.img_location_f);
+                    }else {
+                        gpsOptionClass.start();
+                        ivLocation.setImageResource(R.mipmap.img_location_t);
+                        isLocation = true;
+                    }
+                }else {
+                    gpsOptionClass.stop();
+                    ivLocation.setImageResource(R.mipmap.img_location_f);
+                    isLocation = false;
+                }
+            }
+        });
+        showPopupWindow();
+
     }
     SwipeMenuCreator listMenuCreator = new SwipeMenuCreator() {
 
@@ -361,10 +444,73 @@ public class MainActivity extends AppCompatActivity
                 }
             }else if (mapOption==MapOption.nothing){
                 textView.setText("Nothing");
+            }else if(mapOption ==MapOption.queryArea){
+                if (currentDrawGraphicId > 0) {
+                    graphicsLayer.updateGraphic(currentDrawGraphicId, curPoint.copy());
+                } else {
+                    currentDrawGraphicId = graphicsLayer.addGraphic(new Graphic(curPoint.copy(), SYMBOL_POINT_RED));
+                }
+                searchPoint = curPoint;
+                Geometry geo = graphicsLayer.getGraphic(currentDrawGraphicId).getGeometry();
+                searchPoint(geo);
+                llqueryResultArea.setVisibility(View.VISIBLE);
+                rlZoom.setVisibility(View.GONE);
             }
 
             return true;
         }
+    }
+    public void mapUp(View v){
+        mMapView.zoomout();
+    }
+    public void mapDown(View v){
+        mMapView.zoomin();
+    }
+    private void initExpandListView(){
+        List<String> group = new ArrayList<>();
+        group.add("11");
+        group.add("22");
+        group.add("33");
+        List<String> items = new ArrayList<>();
+        items.add("111");
+        items.add("222");
+        items.add("333");
+        List<String> itemss = new ArrayList<>();
+        itemss.add("111");
+        itemss.add("222");
+        itemss.add("333");
+        List<String> itemsss = new ArrayList<>();
+        itemsss.add("111");
+        itemsss.add("222");
+        itemsss.add("333");
+        final List item = new ArrayList();
+        item.add(items);
+        item.add(itemss);
+        item.add(itemsss);
+        final ExPandAdapter adapter = new ExPandAdapter(group,item);
+        exListView.setGroupIndicator(null);//清除默认Indicator
+        exListView.setAdapter(adapter);
+        //  设置分组项的点击监听事件
+        exListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
+            @Override
+            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+                Log.d(TAG, "onGroupClick: groupPosition:" + groupPosition + ", id:" + id);
+                boolean groupExpanded = parent.isGroupExpanded(groupPosition);
+                adapter.setIndicatorState(groupPosition, groupExpanded);
+                // 请务必返回 false，否则分组不会展开
+                return false;
+            }
+        });
+
+        //  设置子选项点击监听事件
+        exListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                Toast.makeText(MainActivity.this, "llll", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+        });
+
     }
 
     @Override
@@ -502,15 +648,84 @@ public class MainActivity extends AppCompatActivity
                     .setTitle("图层控制")
                     .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
                     .create().show();
+        }else if (id==R.id.nav_queryArea){
+            mapOption = MapOption.queryArea;
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+    private void searchPoint(final Geometry geometry){
+        final List<QueryResultModel> returnRes = new ArrayList<>();
+        final List<List<PipelineModel>> list = new ArrayList<>();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                QueryParameters query = new QueryParameters();
+                query.setGeometry(geometry);
+                query.setWhere("1=1");
+                query.setReturnGeometry(true);
+                query.setOutFields(new String[]{"*"});
+                query.setSpatialRelationship(SpatialRelationship.INTERSECTS);
+                query.setInSpatialReference(mMapView.getSpatialReference());
+                for (FeatureLayer layer :featureLayers){
+                    if (!layer.isVisible()){
+                        continue;
+                    }
+                    Future<FeatureResult> res = layer.getFeatureTable().queryFeatures(query, null);
+                    try {
+                        for (Object object : res.get()){
+                            ShapefileFeature feature = (ShapefileFeature) object;
+                            QueryResultModel result = new QueryResultModel();
+                            result.setLayerName(layer.getName());
+                            result.setAttributes(feature.getAttributes());
+                            result.setFeatureId(feature.getId());
+                            result.setGeometry(feature.getGeometry().copy());
+                            returnRes.add(result);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+                final List<String> layerName = new ArrayList<String>();
+                final List<List<Attubides>> layerAttu = new ArrayList<>();
+                for (QueryResultModel queryResultModel : returnRes){
+                    layerName.add(queryResultModel.getLayerName());
+                    Map<String, Object> attributes = queryResultModel.getAttributes();
+                    Iterator iter = attributes.entrySet().iterator();
+                    List<Attubides> list1 = new ArrayList();
+                    while (iter.hasNext()) {
+                        Map.Entry entry = (Map.Entry) iter.next();
+                        String key = (String) entry.getKey();
+                        Object val =  entry.getValue();
+                        Attubides attu = new Attubides();
+                        attu.setKey(key);
+                        attu.setValue(val);
+                        list1.add(attu);
+                    }
+                    layerAttu.add(list1);
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ExPandableAdapter adapters = new ExPandableAdapter(layerName, layerAttu);
+                        exListView.setGroupIndicator(null);
+                        exListView.setAdapter(adapters);
+                    }
+                });
+
+            }
+        }).start();
+
+    }
+    private boolean isLocation = false;
     private void initMapView() {
         m_state = STATE_SHOW;
         mMapView = (MapView) findViewById(R.id.map_view);
         String path="file:///storage/sdcard0/basemap.tpk";
+        String paths="file:///storage/sdcard0/YNMRP/汇总数据/基础底图.tpk";
         //声明并实例化ArcGISLocalTiledLayer
         ArcGISLocalTiledLayer localMap=new ArcGISLocalTiledLayer(path);
         //将离线地图加载到MapView中
@@ -520,9 +735,51 @@ public class MainActivity extends AppCompatActivity
         markLayer = new GraphicsLayer();
         markLayer.setName("标注图层");
         reLaodLayer();
+        locationLayer = new GraphicsLayer();
+        locationLayer.setName("定位图层");
+        gpsOptionClass = new GPSOptionClass(mMapView, locationLayer, GPSOptionClass.GPSProjectType.KM87);
+        gpsOptionClass.setMaxLocationScale(3000);
         mMapView.addLayer(markLayer);
         mMapView.addLayer(graphicsLayer);
+        mMapView.addLayer(locationLayer);
+        addFeatureLayer();
         mapTouch();
+    }
+    private void addFeatureLayer(){
+        LayerUtils layerUtils = new LayerUtils();
+        List<String> path = layerUtils.getPath();
+        Log.d(TAG, "addFeatureLayer: "+path);
+        if (path.size()>0&&path!=null){
+            for (String data :path)
+                try {
+                    File file = new File(data);
+                    String name = file.getName().substring(0, file.getName().length() - 4);
+                    ShapefileFeatureTable featureTable = new ShapefileFeatureTable(data);
+                    FeatureLayer featureLayer = new FeatureLayer(featureTable);
+                    featureLayer.setRenderer(getRenderer(featureLayer.getGeometryType()));
+                    featureLayer.setName(name);
+                    mMapView.addLayer(featureLayer);
+                    featureLayers.add(featureLayer);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+        }
+
+
+    }
+    private Renderer getRenderer(Geometry.Type type) {
+        if (type == Geometry.Type.ENVELOPE
+                || type == Geometry.Type.POLYGON) {
+            return new SimpleRenderer(SYMBOL_FILL_DEFAULT);
+        } else if (type == Geometry.Type.LINE
+                || type == Geometry.Type.POLYLINE) {
+            return new SimpleRenderer(SYMBOL_LINE_DEFAULT);
+        } else if (type == Geometry.Type.MULTIPOINT
+                || type == Geometry.Type.POINT) {
+            return new SimpleRenderer(SYMBOL_POINT_DEFAULT);
+        } else {
+            return null;
+        }
     }
     /**
      * 创建标注说明中的link标签
@@ -852,6 +1109,7 @@ public class MainActivity extends AppCompatActivity
                    public void run() {
                      if (returnRes.size()>0&&returnRes!=null){
                          llqueryResult.setVisibility(View.VISIBLE);
+                         rlZoom.setVisibility(View.GONE);
                          markLayer.clearSelection();
                          adapter = new QueryResultAdapter(returnRes, true);
                          listView.setAdapter(adapter);
@@ -987,5 +1245,29 @@ public class MainActivity extends AppCompatActivity
             return false;
         }
         return super.onKeyDown(keyCode, event);
+    }
+    public void showPopupWindow(){
+        View popView = LayoutInflater.from(MainActivity.this).inflate(R.layout.popupwindow_item,null);
+        int spinnerWeight = PixelUtils.getInstance().dp2Px(getResources(), 250);
+        popupWindow = new PopupWindow(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        popupWindow.setContentView(popView);
+        popupWindow.setWidth(spinnerWeight);
+        popupWindow.setFocusable(true);
+        popupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+        popupWindow.setOutsideTouchable(true);
+        LinearLayout llLength = popView.findViewById(R.id.ll_measure_length);
+        LinearLayout llArea = popView.findViewById(R.id.ll_measure_area);
+        llLength.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                popupWindow.dismiss();
+            }
+        });
+        llArea.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                popupWindow.dismiss();
+            }
+        });
     }
 }
