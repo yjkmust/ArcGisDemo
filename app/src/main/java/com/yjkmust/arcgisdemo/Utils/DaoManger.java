@@ -15,6 +15,9 @@ public class DaoManger extends Application {
     public static DaoManger daoManger;
     public static DaoMaster daoMaster;
     public static DaoSession daoSession;
+    private static DaoMaster.DevOpenHelper dbtests;
+
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -28,15 +31,18 @@ public class DaoManger extends Application {
              * 指定数据库文件生成目录,重写ContextWrapper类
              */
             DataBaseContext mContext = new DataBaseContext(context);
-            DaoMaster.DevOpenHelper dbtests = new DaoMaster.DevOpenHelper(mContext, "demo.db", null);
-            SQLiteDatabase writableDatabase1 = dbtests.getWritableDatabase();
-            daoMaster = new DaoMaster(writableDatabase1);
+            dbtests = new DaoMaster.DevOpenHelper(mContext, "demo.db", null);
+            SQLiteDatabase normal = dbtests.getWritableDatabase();//数据库不加密
+            daoMaster = new DaoMaster(normal);
+//            Database encryption = dbtests.getEncryptedWritableDb("encryption");//数据库加密
+//            daoMaster = new DaoMaster(encryption);
+
             /**
              * 默认数据库文件生成目录
              */
 //            DaoMaster.DevOpenHelper dbtest = new DaoMaster.DevOpenHelper(context, "dbtest", null);
-//            SQLiteDatabase writableDatabase = dbtest.getWritableDatabase();
-//            daoMaster = new DaoMaster(writableDatabase);
+//            Database oooooh = dbtest.getEncryptedWritableDb("oooooh");
+//            daoMaster = new DaoMaster(oooooh);
         }
         return daoMaster;
     }

@@ -43,6 +43,7 @@ import com.baoyz.swipemenulistview.SwipeMenuItem;
 import com.baoyz.swipemenulistview.SwipeMenuListView;
 import com.esri.android.map.FeatureLayer;
 import com.esri.android.map.GraphicsLayer;
+import com.esri.android.map.Layer;
 import com.esri.android.map.MapOnTouchListener;
 import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISLocalTiledLayer;
@@ -73,11 +74,14 @@ import com.yjkmust.arcgisdemo.Adapters.ExPandableAdapter;
 import com.yjkmust.arcgisdemo.Adapters.LayerVisibilityAdapter;
 import com.yjkmust.arcgisdemo.Adapters.QueryResultAdapter;
 import com.yjkmust.arcgisdemo.Bean.Attubides;
+import com.yjkmust.arcgisdemo.Bean.CityBean;
+import com.yjkmust.arcgisdemo.Bean.CityJsonBean;
 import com.yjkmust.arcgisdemo.Bean.MapQueryResultModel;
 import com.yjkmust.arcgisdemo.Bean.MarkLayerDb;
 import com.yjkmust.arcgisdemo.Bean.PipelineModel;
 import com.yjkmust.arcgisdemo.Bean.QueryResultModel;
 import com.yjkmust.arcgisdemo.Option.GPSOptionClass;
+import com.yjkmust.arcgisdemo.Option.ParseJson;
 import com.yjkmust.arcgisdemo.Utils.DbUtils;
 import com.yjkmust.arcgisdemo.Utils.LayerUtils;
 import com.yjkmust.arcgisdemo.Utils.PixelUtils;
@@ -124,7 +128,7 @@ public class MainActivity extends AppCompatActivity
     private final SimpleFillSymbol SYMBOL_FILL_DEFAULT =
             new SimpleFillSymbol(Color.argb(100, 255, 255, 0));
     private final SimpleMarkerSymbol SYMBOL_POINT_RED =
-            new SimpleMarkerSymbol(Color.argb(255, 255, 0, 0), 5, SimpleMarkerSymbol.STYLE.CIRCLE);
+            new SimpleMarkerSymbol(Color.argb(255, 255, 0, 0), 20, SimpleMarkerSymbol.STYLE.CIRCLE);
     private final SimpleMarkerSymbol SYMBOL_POINT_DEFAULT =
             new SimpleMarkerSymbol(Color.rgb( 255, 255, 0), 10, SimpleMarkerSymbol.STYLE.CIRCLE);
     private final TextSymbol SYMBOL_TEXT_RED = new TextSymbol(14, "", Color.RED, TextSymbol.HorizontalAlignment.LEFT, TextSymbol.VerticalAlignment.MIDDLE) {
@@ -154,6 +158,8 @@ public class MainActivity extends AppCompatActivity
     private RelativeLayout rlZoom;
     private PopupWindow popupWindow;
     private ImageView ivMeasure;
+    private List<CityBean> cityList;
+    private List<List<CityJsonBean.StateBean.CityBean>> countryList;
 
 
     @Override
@@ -178,6 +184,7 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 llqueryResult.setVisibility(View.GONE);
                 rlZoom.setVisibility(View.VISIBLE);
+                ivMeasure.setVisibility(View.VISIBLE);
             }
         });
         btnClearArea.setOnClickListener(new View.OnClickListener() {
@@ -241,7 +248,15 @@ public class MainActivity extends AppCompatActivity
             }
         });
         showPopupWindow();
+        initJson();
 
+    }
+    private void initJson(){
+        ParseJson parseJson = new ParseJson();
+        cityList = parseJson.getCityList();
+        countryList = parseJson.getCountryList();
+        Log.i(TAG, "initJson: " + cityList.toString());
+        Log.i(TAG, "initJson: 3333"+countryList.toString());
     }
     SwipeMenuCreator listMenuCreator = new SwipeMenuCreator() {
 
@@ -455,6 +470,7 @@ public class MainActivity extends AppCompatActivity
                 searchPoint(geo);
                 llqueryResultArea.setVisibility(View.VISIBLE);
                 rlZoom.setVisibility(View.GONE);
+                ivMeasure.setVisibility(View.GONE);
             }
 
             return true;
@@ -663,18 +679,25 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 QueryParameters query = new QueryParameters();
                 query.setGeometry(geometry);
-                query.setWhere("1=1");
+                query.setWhere("");
                 query.setReturnGeometry(true);
                 query.setOutFields(new String[]{"*"});
                 query.setSpatialRelationship(SpatialRelationship.INTERSECTS);
                 query.setInSpatialReference(mMapView.getSpatialReference());
-                for (FeatureLayer layer :featureLayers){
-                    if (!layer.isVisible()){
-                        continue;
-                    }
-                    Future<FeatureResult> res = layer.getFeatureTable().queryFeatures(query, null);
+//                for (FeatureLayer layer :featureLayers){
+                for (Layer layer : mMapView.getLayers()) {
+//                    if (!layer.isVisible()){
+//                        continue;
+//                    }
+                    if (layer instanceof FeatureLayer) {
+                        if(!layer.isVisible()){
+                            continue;
+                        }
+
+                    ShapefileFeatureTable tab = (ShapefileFeatureTable) ((FeatureLayer) layer).getFeatureTable();
+                    Future<FeatureResult> res = tab.queryFeatures(query, null);
                     try {
-                        for (Object object : res.get()){
+                        for (Object object : res.get()) {
                             ShapefileFeature feature = (ShapefileFeature) object;
                             QueryResultModel result = new QueryResultModel();
                             result.setLayerName(layer.getName());
@@ -683,12 +706,14 @@ public class MainActivity extends AppCompatActivity
                             result.setGeometry(feature.getGeometry().copy());
                             returnRes.add(result);
                         }
+                        Log.i("log", returnRes.toString());
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     } catch (ExecutionException e) {
                         e.printStackTrace();
                     }
                 }
+            }
                 final List<String> layerName = new ArrayList<String>();
                 final List<List<Attubides>> layerAttu = new ArrayList<>();
                 for (QueryResultModel queryResultModel : returnRes){
@@ -760,11 +785,12 @@ public class MainActivity extends AppCompatActivity
                     featureLayer.setName(name);
                     mMapView.addLayer(featureLayer);
                     featureLayers.add(featureLayer);
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
         }
-
+        Log.i("log",mMapView.getLayers().length+"");
 
     }
     private Renderer getRenderer(Geometry.Type type) {
@@ -780,6 +806,9 @@ public class MainActivity extends AppCompatActivity
         } else {
             return null;
         }
+    }
+    private Renderer getRenderers(Geometry.Type type) {
+            return new SimpleRenderer(SYMBOL_FILL_DEFAULT);
     }
     /**
      * 创建标注说明中的link标签
@@ -1260,6 +1289,12 @@ public class MainActivity extends AppCompatActivity
         llLength.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                currentDrawGraphicId = -1;
+                mapOption = MapOption.distance;
+                textView.setText("距离测量");
+                graphicsLayer.removeAll();
+                linearLayout.setVisibility(View.GONE);
+                imageView.setImageResource(R.drawable.ic_measure_length);
                 popupWindow.dismiss();
             }
         });
@@ -1267,6 +1302,12 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 popupWindow.dismiss();
+                currentDrawGraphicId = -1;
+                mapOption = MapOption.area;
+                textView.setText("面积测量");
+                graphicsLayer.removeAll();
+                linearLayout.setVisibility(View.GONE);
+                imageView.setImageResource(R.drawable.ic_measure_area);
             }
         });
     }

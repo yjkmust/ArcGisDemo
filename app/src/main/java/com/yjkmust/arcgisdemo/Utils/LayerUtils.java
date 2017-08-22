@@ -14,10 +14,10 @@ import java.util.List;
     private String TAG = "yaojie";
     public List<String> getPath(){
         String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/LayerShape";
-        String filePaths = Environment.getExternalStorageDirectory().getAbsolutePath() + "/YNMRP/汇总数据";
+//        String filePaths = Environment.getExternalStorageDirectory().getAbsolutePath() + "/YNMRP/汇总数据";
 //        String filePaths = "file:///storage/sdcard0/LayerShape";
         List list = new ArrayList();
-        File file = new File(filePaths);
+        File file = new File(filePath);
         if (!file.exists()){
             file.mkdirs();
         }
