@@ -73,7 +73,6 @@ public class LayerVisibilityAdapter extends BaseAdapter {
         });
         text.setText(layer.getName());
         op.setChecked(layer.isVisible());
-
         return v;
     }
 }

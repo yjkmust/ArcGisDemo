@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
@@ -69,9 +70,9 @@ import com.esri.core.tasks.SpatialRelationship;
 import com.esri.core.tasks.query.QueryParameters;
 import com.klinker.android.link_builder.Link;
 import com.klinker.android.link_builder.LinkBuilder;
-import com.yjkmust.arcgisdemo.Adapters.ExPandAdapter;
 import com.yjkmust.arcgisdemo.Adapters.ExPandableAdapter;
 import com.yjkmust.arcgisdemo.Adapters.LayerVisibilityAdapter;
+import com.yjkmust.arcgisdemo.Adapters.NormalExpandableListAdapter;
 import com.yjkmust.arcgisdemo.Adapters.QueryResultAdapter;
 import com.yjkmust.arcgisdemo.Bean.Attubides;
 import com.yjkmust.arcgisdemo.Bean.CityBean;
@@ -82,6 +83,7 @@ import com.yjkmust.arcgisdemo.Bean.PipelineModel;
 import com.yjkmust.arcgisdemo.Bean.QueryResultModel;
 import com.yjkmust.arcgisdemo.Option.GPSOptionClass;
 import com.yjkmust.arcgisdemo.Option.ParseJson;
+import com.yjkmust.arcgisdemo.Service.PipelineService;
 import com.yjkmust.arcgisdemo.Utils.DbUtils;
 import com.yjkmust.arcgisdemo.Utils.LayerUtils;
 import com.yjkmust.arcgisdemo.Utils.PixelUtils;
@@ -157,34 +159,35 @@ public class MainActivity extends AppCompatActivity
     private ImageView ivLocation;
     private RelativeLayout rlZoom;
     private PopupWindow popupWindow;
+    private PopupWindow collectionPopupWindow;
+
     private ImageView ivMeasure;
     private List<CityBean> cityList;
     private List<List<CityJsonBean.StateBean.CityBean>> countryList;
-
+    private Toolbar toolbar;
+    private ImageView ivQieHuan;
+    private TextView tvYunnanTitle;
+    private ExpandableListView ynexListview;
+    private boolean showYunnanList = false;
+    private LinearLayout llYunnanList;
+    private ImageView ivLayer;
+    private ImageView ivMapUtils;
+    private ImageView ivCollection;
+    private ListView listView1;
+    private RelativeLayout rlOpration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
        setContentView(R.layout.activity_main);
-        textView = (TextView) findViewById(R.id.tv_display);
-        imageView = (ImageView) findViewById(R.id.iv_image);
-        ivLocation = (ImageView) findViewById(R.id.iv_location);
-        linearLayout = (LinearLayout) findViewById(R.id.ll_content);
-        llqueryResult = (LinearLayout) findViewById(R.id.ll_queryResult);
-        llqueryResultArea = (LinearLayout) findViewById(R.id.ll_queryResultArea);
-        rlZoom = (RelativeLayout) findViewById(R.id.rl_zoom);
-        btnClear = (Button) findViewById(R.id.btnClear);
-        btnClearArea = (Button) findViewById(R.id.btnClears);
-        listView = (SwipeMenuListView) findViewById(R.id.lstView);
-        exListView = (ExpandableListView) findViewById(R.id.exListView);
-        ivMeasure = (ImageView) findViewById(R.id.iv_measure);
-
+        initView();
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 llqueryResult.setVisibility(View.GONE);
                 rlZoom.setVisibility(View.VISIBLE);
                 ivMeasure.setVisibility(View.VISIBLE);
+                rlOpration.setVisibility(View.VISIBLE);
             }
         });
         btnClearArea.setOnClickListener(new View.OnClickListener() {
@@ -192,17 +195,21 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 llqueryResultArea.setVisibility(View.GONE);
                 rlZoom.setVisibility(View.VISIBLE);
+                rlOpration.setVisibility(View.VISIBLE);
             }
         });
-        ivMeasure.setOnClickListener(new View.OnClickListener() {
+        ivQieHuan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int x = PixelUtils.getInstance().dp2Px(getResources(),-250);
-                int y = PixelUtils.getInstance().dp2Px(getResources(), -75);
-                popupWindow.showAsDropDown(ivMeasure,x,y);
+                if (!showYunnanList){
+                    llYunnanList.setVisibility(View.VISIBLE);
+                    showYunnanList = true;
+                }else {
+                    llYunnanList.setVisibility(View.GONE);
+                    showYunnanList = false;
+                }
             }
         });
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         dbUtils = DbUtils.getDbUtils(this);
         featureLayers = new ArrayList<>();
@@ -248,15 +255,54 @@ public class MainActivity extends AppCompatActivity
             }
         });
         showPopupWindow();
+        showCollectionPopupWindow();
         initJson();
 
+    }
+    private void initView(){
+        textView = (TextView) findViewById(R.id.tv_display);
+        imageView = (ImageView) findViewById(R.id.iv_image);
+        ivLocation = (ImageView) findViewById(R.id.iv_location);
+        linearLayout = (LinearLayout) findViewById(R.id.ll_content);
+        llqueryResult = (LinearLayout) findViewById(R.id.ll_queryResult);
+        llqueryResultArea = (LinearLayout) findViewById(R.id.ll_queryResultArea);
+        rlZoom = (RelativeLayout) findViewById(R.id.rl_zoom);
+        btnClear = (Button) findViewById(R.id.btnClear);
+        btnClearArea = (Button) findViewById(R.id.btnClears);
+        listView = (SwipeMenuListView) findViewById(R.id.lstView);
+        exListView = (ExpandableListView) findViewById(R.id.exListView);
+        ivMeasure = (ImageView) findViewById(R.id.iv_measure);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        ivQieHuan = (ImageView) findViewById(R.id.iv_qiehuan);
+        tvYunnanTitle = (TextView)  findViewById(R.id.tv_yunnan_title);
+        ynexListview = (ExpandableListView) findViewById(R.id.ynex_listview);
+        llYunnanList = (LinearLayout) findViewById(R.id.ll_yunnanList);
+        ivLayer = (ImageView)  findViewById(R.id.iv_layer);//图层
+        //工具
+        ivMapUtils = (ImageView) findViewById(R.id.iv_map_utils);
+        //采集
+        ivCollection = (ImageView) findViewById(R.id.iv_collection);
+        rlOpration = (RelativeLayout) findViewById(R.id.rl_opration);
     }
     private void initJson(){
         ParseJson parseJson = new ParseJson();
         cityList = parseJson.getCityList();
         countryList = parseJson.getCountryList();
-        Log.i(TAG, "initJson: " + cityList.toString());
-        Log.i(TAG, "initJson: 3333"+countryList.toString());
+        NormalExpandableListAdapter ynAdapter = new NormalExpandableListAdapter(cityList,countryList);
+        ynAdapter.setListener(new NormalExpandableListAdapter.Listener() {
+            @Override
+            public void Position(int position) {
+                tvYunnanTitle.setText(cityList.get(position).getCity());
+            }
+        });
+        ynexListview.setAdapter(ynAdapter);
+        ynexListview.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView expandableListView, View view, int groupPosition, int childPosition, long Id) {
+                tvYunnanTitle.setText(cityList.get(groupPosition).getCity()+"-"+countryList.get(groupPosition).get(childPosition).getName());
+                return true;
+            }
+        });
     }
     SwipeMenuCreator listMenuCreator = new SwipeMenuCreator() {
 
@@ -468,6 +514,7 @@ public class MainActivity extends AppCompatActivity
                 searchPoint = curPoint;
                 Geometry geo = graphicsLayer.getGraphic(currentDrawGraphicId).getGeometry();
                 searchPoint(geo);
+                rlOpration.setVisibility(View.GONE);
                 llqueryResultArea.setVisibility(View.VISIBLE);
                 rlZoom.setVisibility(View.GONE);
                 ivMeasure.setVisibility(View.GONE);
@@ -476,58 +523,34 @@ public class MainActivity extends AppCompatActivity
             return true;
         }
     }
+    public void showLayer(View v){
+        listView1 = new ListView(this);
+        listView1.setAdapter(new LayerVisibilityAdapter(mMapView));
+        new AlertDialog.Builder(this, R.style.Dialog_Custom)
+                .setView(listView1)
+                .setTitle("图层控制")
+                .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
+                .create().show();
+    }
+    public void showMapUtils(View view){
+        int x = PixelUtils.getInstance().dp2Px(getResources(),-250);
+        int y = PixelUtils.getInstance().dp2Px(getResources(), -85);
+        popupWindow.showAsDropDown(ivMapUtils,x,y);
+
+    }
+    public void showCollection(View view){
+        int x = PixelUtils.getInstance().dp2Px(getResources(),-250);
+        int y = PixelUtils.getInstance().dp2Px(getResources(), -110);
+        collectionPopupWindow.showAsDropDown(ivCollection,x,y);
+
+    }
     public void mapUp(View v){
         mMapView.zoomout();
     }
     public void mapDown(View v){
         mMapView.zoomin();
     }
-    private void initExpandListView(){
-        List<String> group = new ArrayList<>();
-        group.add("11");
-        group.add("22");
-        group.add("33");
-        List<String> items = new ArrayList<>();
-        items.add("111");
-        items.add("222");
-        items.add("333");
-        List<String> itemss = new ArrayList<>();
-        itemss.add("111");
-        itemss.add("222");
-        itemss.add("333");
-        List<String> itemsss = new ArrayList<>();
-        itemsss.add("111");
-        itemsss.add("222");
-        itemsss.add("333");
-        final List item = new ArrayList();
-        item.add(items);
-        item.add(itemss);
-        item.add(itemsss);
-        final ExPandAdapter adapter = new ExPandAdapter(group,item);
-        exListView.setGroupIndicator(null);//清除默认Indicator
-        exListView.setAdapter(adapter);
-        //  设置分组项的点击监听事件
-        exListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
-            @Override
-            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-                Log.d(TAG, "onGroupClick: groupPosition:" + groupPosition + ", id:" + id);
-                boolean groupExpanded = parent.isGroupExpanded(groupPosition);
-                adapter.setIndicatorState(groupPosition, groupExpanded);
-                // 请务必返回 false，否则分组不会展开
-                return false;
-            }
-        });
 
-        //  设置子选项点击监听事件
-        exListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
-            @Override
-            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                Toast.makeText(MainActivity.this, "llll", Toast.LENGTH_SHORT).show();
-                return true;
-            }
-        });
-
-    }
 
     @Override
     public void onBackPressed() {
@@ -568,13 +591,12 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_point) {
-
             // 切换按钮状态，第一次点击本按钮后进入 “添加graphics状态，这时候单击地图时操作就添加graphics”
             // 第一次点击本按钮后进入 “选中graphics状态“，这时候单击地图时操作就
             // 选择一个graphics，并显示该graphics的附加信息”
             textView.setText(getString(R.string.option_map_mark_point));
             LinkBuilder.on(textView)
-                    .addLinks(makeLinksForMarker(item))
+                    .addLinks(makeLinksForMarker())
                     .build();
             mapOption=MapOption.point;
             currentDrawGraphicId = -1;
@@ -589,7 +611,7 @@ public class MainActivity extends AppCompatActivity
             textView.setText(getString(R.string.option_map_mark_polyline));
             linearLayout.setVisibility(View.VISIBLE);
             LinkBuilder.on(textView)
-                    .addLinks(makeLinksForMarker(item))
+                    .addLinks(makeLinksForMarker())
                     .build();
 
             graphicsLayer.removeAll();
@@ -599,7 +621,7 @@ public class MainActivity extends AppCompatActivity
             mapOption = MapOption.recover;
             textView.setText(getString(R.string.option_map_mark_polygon));
             LinkBuilder.on(textView)
-                    .addLinks(makeLinksForMarker(item))
+                    .addLinks(makeLinksForMarker())
                     .build();
             imageView.setImageResource(R.drawable.ic_marker_polygon);
             linearLayout.setVisibility(View.VISIBLE);
@@ -783,6 +805,9 @@ public class MainActivity extends AppCompatActivity
                     FeatureLayer featureLayer = new FeatureLayer(featureTable);
                     featureLayer.setRenderer(getRenderer(featureLayer.getGeometryType()));
                     featureLayer.setName(name);
+                    if (name!="默认地图"||name!="标注图层"){
+                        featureLayer.setVisible(false);
+                    }
                     mMapView.addLayer(featureLayer);
                     featureLayers.add(featureLayer);
 
@@ -816,7 +841,7 @@ public class MainActivity extends AppCompatActivity
      * @param menuItem
      * @return
      */
-    private List<Link> makeLinksForMarker(final MenuItem menuItem) {
+    private List<Link> makeLinksForMarker() {
         List<Link> links = new ArrayList<>();
         Link link0 = new Link("补充说明")
                 .setBold(true)
@@ -1276,7 +1301,7 @@ public class MainActivity extends AppCompatActivity
         return super.onKeyDown(keyCode, event);
     }
     public void showPopupWindow(){
-        View popView = LayoutInflater.from(MainActivity.this).inflate(R.layout.popupwindow_item,null);
+        final View popView = LayoutInflater.from(MainActivity.this).inflate(R.layout.popupwindow_item,null);
         int spinnerWeight = PixelUtils.getInstance().dp2Px(getResources(), 250);
         popupWindow = new PopupWindow(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
         popupWindow.setContentView(popView);
@@ -1284,8 +1309,18 @@ public class MainActivity extends AppCompatActivity
         popupWindow.setFocusable(true);
         popupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
         popupWindow.setOutsideTouchable(true);
+        LinearLayout llSerach = popView.findViewById(R.id.ll_search_point);
         LinearLayout llLength = popView.findViewById(R.id.ll_measure_length);
         LinearLayout llArea = popView.findViewById(R.id.ll_measure_area);
+        LinearLayout llQueryMark = popView.findViewById(R.id.ll_query_mark);
+        LinearLayout llClearMark = popView.findViewById(R.id.ll_clear_mark);
+        llSerach.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mapOption = MapOption.queryArea;
+                popupWindow.dismiss();
+            }
+        });
         llLength.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -1310,5 +1345,176 @@ public class MainActivity extends AppCompatActivity
                 imageView.setImageResource(R.drawable.ic_measure_area);
             }
         });
+        llQueryMark.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                currentDrawGraphicId = -1;
+                mapOption = MapOption.query;
+                textView.setText("查询标注");
+                inputMarkKey();
+                graphicsLayer.removeAll();
+                linearLayout.setVisibility(View.GONE);
+                imageView.setImageResource(R.drawable.ic_marker_clear);
+                popupWindow.dismiss();
+            }
+        });
+        llClearMark.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                popupWindow.dismiss();
+                new AlertDialog.Builder(MainActivity.this, R.style.Dialog_Custom)
+                        .setIcon(getResources().getDrawable(R.drawable.ic_help_black_24dp))
+                        .setTitle("提示")
+                        .setMessage("是否确定要清除所有标注？")
+                        .setPositiveButton("清除", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                currentDrawGraphicId = -1;
+                                mapOption = MapOption.nothing;
+                                graphicsLayer.removeAll();
+                                markLayer.removeAll();
+                                linearLayout.setVisibility(View.GONE);
+                                dbUtils.DelAllMarkLayer();
+
+                            }
+                        })
+                        .setNegativeButton("取消", null)
+                        .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                            @Override
+                            public void onDismiss(DialogInterface dialogInterface) {
+                            }
+                        })
+                        .create().show();
+
+            }
+        });
+    }
+    public void showCollectionPopupWindow(){
+        View popView = LayoutInflater.from(MainActivity.this).inflate(R.layout.popupwindow_item_collection,null);
+        int spinnerWeight = PixelUtils.getInstance().dp2Px(getResources(), 250);
+        collectionPopupWindow = new PopupWindow(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        collectionPopupWindow.setContentView(popView);
+        collectionPopupWindow.setWidth(spinnerWeight);
+        collectionPopupWindow.setFocusable(true);
+        collectionPopupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+        collectionPopupWindow.setOutsideTouchable(true);
+        LinearLayout llPoint = popView.findViewById(R.id.ll_point_mark);
+        LinearLayout llLine = popView.findViewById(R.id.ll_line_mark);
+        LinearLayout llArea = popView.findViewById(R.id.ll_area_mark);
+        LinearLayout llAny = popView.findViewById(R.id.ll_any_mark);
+        llPoint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // 切换按钮状态，第一次点击本按钮后进入 “添加graphics状态，这时候单击地图时操作就添加graphics”
+                // 第一次点击本按钮后进入 “选中graphics状态“，这时候单击地图时操作就
+                // 选择一个graphics，并显示该graphics的附加信息”
+                textView.setText(getString(R.string.option_map_mark_point));
+                LinkBuilder.on(textView)
+                        .addLinks(makeLinksForMarker())
+                        .build();
+                mapOption=MapOption.point;
+                currentDrawGraphicId = -1;
+                mapOption = point;
+                linearLayout.setVisibility(View.VISIBLE);
+                graphicsLayer.removeAll();
+                collectionPopupWindow.dismiss();
+            }
+        });
+        llLine.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                currentDrawGraphicId = -1;
+                mapOption = MapOption.line;
+                imageView.setImageResource(R.drawable.ic_marker_line);
+                textView.setText(getString(R.string.option_map_mark_polyline));
+                linearLayout.setVisibility(View.VISIBLE);
+                LinkBuilder.on(textView)
+                        .addLinks(makeLinksForMarker())
+                        .build();
+
+                graphicsLayer.removeAll();
+                collectionPopupWindow.dismiss();
+            }
+        });
+        llArea.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                currentDrawGraphicId = -1;
+                mapOption = MapOption.recover;
+                textView.setText(getString(R.string.option_map_mark_polygon));
+                LinkBuilder.on(textView)
+                        .addLinks(makeLinksForMarker())
+                        .build();
+                imageView.setImageResource(R.drawable.ic_marker_polygon);
+                linearLayout.setVisibility(View.VISIBLE);
+                graphicsLayer.removeAll();
+                collectionPopupWindow.dismiss();
+            }
+        });
+        llAny.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                collectionPopupWindow.dismiss();
+            }
+        });
+    }
+    /**
+     *根据行政区代码去查询图层位置
+     */
+    class InnerQueryTask extends AsyncTask<Void,Void,Geometry>{
+        private String code;
+        public InnerQueryTask(String code){
+            this.code = code;
+        }
+        @Override
+        protected Geometry doInBackground(Void... voids) {
+            LayerUtils layerUtils = new LayerUtils();
+            String xzqPath = layerUtils.getXZQPath();
+            File file = new File(xzqPath);
+            Geometry geometry = null;
+            List<ShapefileFeatureTable> list = new ArrayList<>();
+            if (code.equals("530000")){
+                query("XZQDM like '%" + code + "%'");
+                return geometry;
+            }
+            try {
+                ShapefileFeatureTable pointFeatureTable = new ShapefileFeatureTable(file.getAbsolutePath());
+                list.add(pointFeatureTable);
+                PipelineService service = new PipelineService(list);
+                List<PipelineModel> query = service.getAllPipeTypes("XZQHDM="+code+"");
+                for (PipelineModel model : query) {
+                    String searchCode = String.valueOf(model.getAttributes().get("XZQHDM"));
+                    if (searchCode.equals(code)) {
+                        query("XZQDM like '%" + code + "%'");
+                        geometry = model.getGeometry();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return geometry;
+        }
+
+        @Override
+        protected void onPostExecute(Geometry geometry) {
+
+            super.onPostExecute(geometry);
+        }
+    }
+    /**
+     * 地图显示的shape数据过滤
+     *
+     * @param sql
+     *            要过滤的sql语句
+     */
+    private void query(String sql) {
+        for (Layer layer : mMapView.getLayers()) {
+            if (layer instanceof FeatureLayer) {
+                FeatureLayer featureLayer = (FeatureLayer) layer;
+                if (!featureLayer.getName().equals("分幅图")) {
+                    featureLayer.setDefinitionExpression(sql);
+                }
+            }
+        }
     }
 }

@@ -17,11 +17,51 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="#FF4040"
+            android:visibility="gone"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
 
     </android.support.design.widget.AppBarLayout>
 
     <include layout="@layout/content_main" />
+    <RelativeLayout
+        android:id="@+id/rl_opration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|right"
+        android:layout_marginRight="10dp">
+        <ImageView
+            android:id="@+id/iv_layer"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:onClick="showLayer"
+            android:src="@drawable/img_layer"
+            android:layout_marginRight="10dp"/>
+        <ImageView
+            android:id="@+id/iv_map_utils"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:onClick="showMapUtils"
+            android:src="@drawable/img_map_utlis"
+            android:layout_below="@id/iv_layer"
+            android:layout_marginRight="10dp"/>
+        <ImageView
+            android:id="@+id/iv_collection"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:onClick="showCollection"
+            android:src="@drawable/img_menu_info_collection"
+            android:layout_marginRight="10dp"
+            android:layout_below="@id/iv_map_utils"/>
+        <ImageView
+            android:id="@+id/iv_measure"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@mipmap/img_mes"
+            android:layout_below="@id/iv_collection"
+            android:onClick="showPopupWIndow"
+            android:visibility="gone"
+            android:layout_marginRight="10dp"/>
+    </RelativeLayout>
 
     <ImageView
         android:id="@+id/iv_location"
@@ -30,15 +70,7 @@
         android:layout_gravity="bottom|start"
         android:layout_margin="@dimen/fab_margin"
         android:src="@mipmap/img_location_f" />
-    <ImageView
-        android:id="@+id/iv_measure"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:src="@mipmap/img_mes"
-        android:onClick="showPopupWIndow"
-        android:layout_gravity="center|right"
 
-        android:layout_marginRight="10dp"/>
 
     <RelativeLayout
         android:id="@+id/rl_zoom"
@@ -53,6 +85,7 @@
             android:layout_height="60dp"
             android:layout_gravity="bottom|end"
             android:onClick="mapDown"
+            android:layout_marginRight="10dp"
             android:src="@mipmap/img_zoom_out" />
 
         <ImageView
@@ -61,6 +94,7 @@
             android:layout_height="60dp"
             android:layout_below="@id/iv_up"
             android:onClick="mapUp"
+            android:layout_marginRight="10dp"
             android:layout_gravity="bottom|end"
             android:src="@mipmap/img_zoom_in" />
 

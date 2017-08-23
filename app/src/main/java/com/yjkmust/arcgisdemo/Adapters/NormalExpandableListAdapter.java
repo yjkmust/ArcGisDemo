@@ -10,6 +10,7 @@ import android.widget.TextView;
 import com.yjkmust.arcgisdemo.Bean.CityBean;
 import com.yjkmust.arcgisdemo.Bean.CityJsonBean;
 import com.yjkmust.arcgisdemo.Inter.onGroupExpandedListener;
+import com.yjkmust.arcgisdemo.MyApp;
 import com.yjkmust.arcgisdemo.R;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class NormalExpandableListAdapter extends BaseExpandableListAdapter {
     private List<CityBean> groupData;
     private List<List<CityJsonBean.StateBean.CityBean>> childData;
     private onGroupExpandedListener mOnGroupExpandedListener;
+    private Listener listener;
 
     public NormalExpandableListAdapter(List<CityBean> groupData, List<List<CityJsonBean.StateBean.CityBean>> childData) {
         this.groupData = groupData;
@@ -69,18 +71,26 @@ public class NormalExpandableListAdapter extends BaseExpandableListAdapter {
     }
 
     @Override
-    public View getGroupView(int groupPosition, boolean isExpanded, View
+    public View getGroupView(final int groupPosition, boolean isExpanded, View
             convertView, ViewGroup parent) {
         GroupViewHolder groupViewHolder;
         if (convertView == null) {
             convertView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_expand_group_normal, parent, false);
             groupViewHolder = new GroupViewHolder();
             groupViewHolder.tvTitle = (TextView) convertView.findViewById(R.id.label_group_normal);
+            groupViewHolder.tvNull = (TextView) convertView.findViewById(R.id.tv_null);
             convertView.setTag(groupViewHolder);
         } else {
             groupViewHolder = (GroupViewHolder) convertView.getTag();
         }
         groupViewHolder.tvTitle.setText(groupData.get(groupPosition).getCity());
+        groupViewHolder.tvNull.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                listener.Position(groupPosition);
+                MyApp.showToast("点击的是"+groupPosition);
+            }
+        });
         return convertView;
     }
 
@@ -120,9 +130,17 @@ public class NormalExpandableListAdapter extends BaseExpandableListAdapter {
 
     private static class GroupViewHolder {
         TextView tvTitle;
+        TextView tvNull;
     }
 
     private static class ChildViewHolder {
         TextView tvTitle;
+    }
+
+    public void setListener(Listener listener){
+        this.listener = listener;
+    }
+    public interface Listener{
+        void Position(int position);
     }
 }

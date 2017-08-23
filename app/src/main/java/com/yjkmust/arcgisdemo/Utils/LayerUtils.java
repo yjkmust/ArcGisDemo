@@ -31,5 +31,9 @@ import java.util.List;
         }
         return list;
     }
+    public String getXZQPath(){
+        String XZQPath= Environment.getExternalStorageDirectory().getAbsolutePath() + "/LayerShape/行政区.shp";
+        return XZQPath;
+    }
 
 }

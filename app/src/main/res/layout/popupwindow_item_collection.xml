@@ -5,13 +5,13 @@
     android:layout_height="match_parent">
     <ImageView
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="150dp"
         android:src="@mipmap/popup_bg_1"
         android:scaleType="fitXY"
         android:id="@+id/imageView2" />
     <ImageView
         android:layout_width="match_parent"
-        android:layout_height="150dp"
+        android:layout_height="120dp"
         android:src="@mipmap/popup_bg_3"
         android:scaleType="fitXY"
 
@@ -23,14 +23,15 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
+        android:layout_marginTop="24dp"
         android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp">
+        android:layout_alignParentStart="true">
         <LinearLayout
-            android:id="@+id/ll_search_point"
+            android:id="@+id/ll_point_mark"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_margin="5dp">
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -39,7 +40,7 @@
                 android:id="@+id/tv_search_point"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="点查询"
+                android:text="点标注"
                 android:textColor="#fff"
                 android:layout_marginLeft="20dp"
                 android:layout_gravity="center"
@@ -47,11 +48,11 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/ll_measure_length"
+            android:id="@+id/ll_line_mark"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-           >
+            android:layout_margin="5dp">
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -60,7 +61,7 @@
                 android:id="@+id/tv_measure_length"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="距离测量"
+                android:text="线标注"
                 android:textColor="#fff"
                 android:layout_marginLeft="20dp"
                 android:layout_gravity="center"
@@ -68,11 +69,31 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/ll_measure_area"
+            android:id="@+id/ll_area_mark"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            >
+            android:layout_margin="5dp">
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@mipmap/map_utils_area"/>
+            <TextView
+                android:id="@+id/tv_measure_areas"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="面标注"
+                android:textColor="#fff"
+                android:layout_gravity="center"
+                android:layout_marginLeft="20dp"
+                android:textSize="20sp"/>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/ll_any_mark"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="5dp">
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -81,47 +102,7 @@
                 android:id="@+id/tv_measure_area"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="面积测量"
-                android:textColor="#fff"
-                android:layout_gravity="center"
-                android:layout_marginLeft="20dp"
-                android:textSize="20sp"/>
-        </LinearLayout>
-        <LinearLayout
-            android:id="@+id/ll_query_mark"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            >
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@mipmap/map_utils_area"/>
-            <TextView
-                android:id="@+id/tv_query_mark"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="查询标注"
-                android:textColor="#fff"
-                android:layout_gravity="center"
-                android:layout_marginLeft="20dp"
-                android:textSize="20sp"/>
-        </LinearLayout>
-        <LinearLayout
-            android:id="@+id/ll_clear_mark"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            >
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@mipmap/map_utils_area"/>
-            <TextView
-                android:id="@+id/tv_clear_mark"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="查询标注"
+                android:text="随手标注"
                 android:textColor="#fff"
                 android:layout_gravity="center"
                 android:layout_marginLeft="20dp"
