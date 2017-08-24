@@ -29,6 +29,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center|right"
         android:layout_marginRight="10dp">
+
         <ImageView
             android:id="@+id/iv_layer"
             android:layout_width="60dp"
@@ -62,6 +63,14 @@
             android:visibility="gone"
             android:layout_marginRight="10dp"/>
     </RelativeLayout>
+    <com.github.ybq.android.spinkit.SpinKitView
+        android:id="@+id/sk_progress"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        style="@style/SpinKitView.Circle"
+        app:SpinKit_Color="@color/Blue"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
 
     <ImageView
         android:id="@+id/iv_location"

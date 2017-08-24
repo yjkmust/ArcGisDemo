@@ -16,6 +16,8 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -66,11 +68,14 @@ import com.esri.core.symbol.SimpleFillSymbol;
 import com.esri.core.symbol.SimpleLineSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.core.symbol.TextSymbol;
+import com.esri.core.table.FeatureTable;
 import com.esri.core.tasks.SpatialRelationship;
 import com.esri.core.tasks.query.QueryParameters;
+import com.github.ybq.android.spinkit.SpinKitView;
 import com.klinker.android.link_builder.Link;
 import com.klinker.android.link_builder.LinkBuilder;
 import com.yjkmust.arcgisdemo.Adapters.ExPandableAdapter;
+import com.yjkmust.arcgisdemo.Adapters.LayerContentAdapter;
 import com.yjkmust.arcgisdemo.Adapters.LayerVisibilityAdapter;
 import com.yjkmust.arcgisdemo.Adapters.NormalExpandableListAdapter;
 import com.yjkmust.arcgisdemo.Adapters.QueryResultAdapter;
@@ -121,6 +126,7 @@ public class MainActivity extends AppCompatActivity
     private ImageView imageView;
     private LinearLayout linearLayout;
     private LinearLayout llqueryResult;
+    private List<PipelineModel> listModel;
     private MapOption mapOption = MapOption.nothing;
     private final int SIZE_CLICK_POINT = 30;
     private final SimpleMarkerSymbol SYMBOL_CLICK_POINT =
@@ -175,6 +181,13 @@ public class MainActivity extends AppCompatActivity
     private ImageView ivCollection;
     private ListView listView1;
     private RelativeLayout rlOpration;
+    private SpinKitView skProgree;
+    private Layer[] layers;
+    private LinearLayout llLayerContent;
+    private TextView tvLayerName;
+    private Button btnClearss;
+    private RecyclerView rvLayerContent;
+    private LayerContentAdapter layerContentAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -208,6 +221,14 @@ public class MainActivity extends AppCompatActivity
                     llYunnanList.setVisibility(View.GONE);
                     showYunnanList = false;
                 }
+            }
+        });
+        btnClearss.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                llLayerContent.setVisibility(View.GONE);
+                rlOpration.setVisibility(View.VISIBLE);
+                rlZoom.setVisibility(View.VISIBLE);
             }
         });
         setSupportActionBar(toolbar);
@@ -257,7 +278,8 @@ public class MainActivity extends AppCompatActivity
         showPopupWindow();
         showCollectionPopupWindow();
         initJson();
-
+        layers = mMapView.getLayers();
+        listModel = new ArrayList<>();
     }
     private void initView(){
         textView = (TextView) findViewById(R.id.tv_display);
@@ -283,6 +305,11 @@ public class MainActivity extends AppCompatActivity
         //采集
         ivCollection = (ImageView) findViewById(R.id.iv_collection);
         rlOpration = (RelativeLayout) findViewById(R.id.rl_opration);
+        skProgree = (SpinKitView) findViewById(R.id.sk_progress);
+        llLayerContent = (LinearLayout) findViewById(R.id.ll_layer_content);
+        tvLayerName = (TextView) findViewById(R.id.tv_layer_name);
+        btnClearss = (Button) findViewById(R.id.btnClearss);
+        rvLayerContent = (RecyclerView) findViewById(R.id.rv_layer_content);
     }
     private void initJson(){
         ParseJson parseJson = new ParseJson();
@@ -293,13 +320,19 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void Position(int position) {
                 tvYunnanTitle.setText(cityList.get(position).getCity());
+                skProgree.setVisibility(View.VISIBLE);
+                String code = "53" + cityList.get(position).getCode() + "00";
+                new InnerQueryTask(code).execute();
             }
         });
         ynexListview.setAdapter(ynAdapter);
         ynexListview.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
             @Override
             public boolean onChildClick(ExpandableListView expandableListView, View view, int groupPosition, int childPosition, long Id) {
+                skProgree.setVisibility(View.VISIBLE);
                 tvYunnanTitle.setText(cityList.get(groupPosition).getCity()+"-"+countryList.get(groupPosition).get(childPosition).getName());
+                String code = "53"+cityList.get(groupPosition).getCode()+countryList.get(groupPosition).get(childPosition).getCode();
+                new InnerQueryTask(code).execute();
                 return true;
             }
         });
@@ -524,13 +557,37 @@ public class MainActivity extends AppCompatActivity
         }
     }
     public void showLayer(View v){
+        List<Layer> listLayer = new ArrayList<>();
+        for (Layer layer : layers){
+            if (layer.getName()==null || layer.getName().isEmpty()){
+                continue;
+            }
+            listLayer.add(0,layer);
+        }
         listView1 = new ListView(this);
-        listView1.setAdapter(new LayerVisibilityAdapter(mMapView));
-        new AlertDialog.Builder(this, R.style.Dialog_Custom)
-                .setView(listView1)
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Dialog_Custom);
+        builder.setView(listView1)
                 .setTitle("图层控制")
-                .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
-                .create().show();
+                .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp));
+        final AlertDialog dialog = builder.create();
+        dialog.show();
+        LayerVisibilityAdapter adapter = new LayerVisibilityAdapter(listLayer);
+        adapter.setContentListener(new LayerVisibilityAdapter.ContentListener() {
+            @Override
+            public void content(Layer layer, int position,String name) {
+                dialog.dismiss();
+                tvLayerName.setText(name);
+                skProgree.setVisibility(View.VISIBLE);
+                new showLayerContent(layer).execute();
+            }
+        });
+        listView1.setAdapter(adapter);
+
+//        new AlertDialog.Builder(this, R.style.Dialog_Custom)
+//                .setView(listView1)
+//                .setTitle("图层控制")
+//                .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
+//                .create().show();
     }
     public void showMapUtils(View view){
         int x = PixelUtils.getInstance().dp2Px(getResources(),-250);
@@ -679,13 +736,13 @@ public class MainActivity extends AppCompatActivity
                     .create().show();
 
         }else if (id==R.id.nav_layer){
-            ListView listView = new ListView(this);
-            listView.setAdapter(new LayerVisibilityAdapter(mMapView));
-            new AlertDialog.Builder(this, R.style.Dialog_Custom)
-                    .setView(listView)
-                    .setTitle("图层控制")
-                    .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
-                    .create().show();
+//            ListView listView = new ListView(this);
+//            listView.setAdapter(new LayerVisibilityAdapter(mMapView));
+//            new AlertDialog.Builder(this, R.style.Dialog_Custom)
+//                    .setView(listView)
+//                    .setTitle("图层控制")
+//                    .setIcon(getResources().getDrawable(R.drawable.ic_layers_blue_24dp))
+//                    .create().show();
         }else if (id==R.id.nav_queryArea){
             mapOption = MapOption.queryArea;
         }
@@ -736,6 +793,9 @@ public class MainActivity extends AppCompatActivity
                     }
                 }
             }
+                /**
+                 * Attu获取内容
+                 */
                 final List<String> layerName = new ArrayList<String>();
                 final List<List<Attubides>> layerAttu = new ArrayList<>();
                 for (QueryResultModel queryResultModel : returnRes){
@@ -838,7 +898,7 @@ public class MainActivity extends AppCompatActivity
     /**
      * 创建标注说明中的link标签
      *
-     * @param menuItem
+     * @param
      * @return
      */
     private List<Link> makeLinksForMarker() {
@@ -1459,6 +1519,43 @@ public class MainActivity extends AppCompatActivity
         });
     }
     /**
+     * 图层详情
+     */
+    class showLayerContent extends AsyncTask<Void,Void,List<PipelineModel>>{
+        private Layer layer;
+        public showLayerContent(Layer layer){
+            this.layer = layer;
+        }
+
+        @Override
+        protected List<PipelineModel> doInBackground(Void... voids) {
+            List<PipelineModel> res = new ArrayList<>();
+            FeatureLayer featureLayer = (FeatureLayer) layer;
+            FeatureTable featureTable = featureLayer.getFeatureTable();
+            List<ShapefileFeatureTable> list = new ArrayList<ShapefileFeatureTable>();
+            list.add((ShapefileFeatureTable) featureTable);
+            PipelineService service = new PipelineService(list);
+            res = service.getAllPipeTypes("");
+            return res;
+        }
+
+        @Override
+        protected void onPostExecute(List<PipelineModel> result) {
+            skProgree.setVisibility(View.GONE);
+            llLayerContent.setVisibility(View.VISIBLE);
+            rlOpration.setVisibility(View.GONE);
+            rlZoom.setVisibility(View.GONE);
+            Log.d(TAG, "onPostExecute: "+result.toString());
+            listModel = result;
+            Log.d(TAG, "onPostExecute: "+listModel.size());
+            rvLayerContent.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+            layerContentAdapter = new LayerContentAdapter(listModel);
+            rvLayerContent.setAdapter(layerContentAdapter);
+            layerContentAdapter.notifyDataSetChanged();
+            super.onPostExecute(result);
+        }
+    }
+    /**
      *根据行政区代码去查询图层位置
      */
     class InnerQueryTask extends AsyncTask<Void,Void,Geometry>{
@@ -1497,8 +1594,12 @@ public class MainActivity extends AppCompatActivity
 
         @Override
         protected void onPostExecute(Geometry geometry) {
-
-            super.onPostExecute(geometry);
+            skProgree.setVisibility(View.GONE);
+            if (geometry != null) {
+                mMapView.setExtent(geometry, -600, true);
+            } else {
+                mMapView.zoomToScale(mMapView.getCenter(), 10000000);
+            }
         }
     }
     /**
@@ -1516,5 +1617,11 @@ public class MainActivity extends AppCompatActivity
                 }
             }
         }
+    }
+    /**
+     * 图层详情View
+     */
+    private void LayerContent(){
+
     }
 }

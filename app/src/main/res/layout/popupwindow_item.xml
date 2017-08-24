@@ -121,7 +121,7 @@
                 android:id="@+id/tv_clear_mark"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="查询标注"
+                android:text="清除标注"
                 android:textColor="#fff"
                 android:layout_gravity="center"
                 android:layout_marginLeft="20dp"

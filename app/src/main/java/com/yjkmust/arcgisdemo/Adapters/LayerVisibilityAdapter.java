@@ -5,47 +5,36 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import com.esri.android.map.GraphicsLayer;
 import com.esri.android.map.Layer;
-import com.esri.android.map.MapView;
+import com.esri.android.map.ags.ArcGISLocalTiledLayer;
 import com.yjkmust.arcgisdemo.MyApp;
 import com.yjkmust.arcgisdemo.R;
 
-import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * Created by Shyam on 2016/8/26.
  */
 public class LayerVisibilityAdapter extends BaseAdapter {
-
-    private MapView mapView;
     private List<Layer> allLayers;
     private LayoutInflater inflater;
-
-    public LayerVisibilityAdapter(MapView mapView){
+    public LayerVisibilityAdapter(List<Layer> allLayers){
         inflater = LayoutInflater.from(MyApp.getInstance());
-        this.mapView = mapView;
-        allLayers = new ArrayList<Layer>();
-        if (mapView != null){
-            for (Layer layer : mapView.getLayers()) {
-                if (layer.getName() == null || layer.getName().length() <= 0){
-                    continue;
-                }
-                allLayers.add(0, layer);
-            }
+        this.allLayers = allLayers;
         }
-    }
-
     @Override
     public int getCount() {
         return allLayers.size();
     }
 
     @Override
-    public Object getItem(int i) {
+    public Layer getItem(int i) {
         return allLayers.get(i);
     }
 
@@ -55,13 +44,32 @@ public class LayerVisibilityAdapter extends BaseAdapter {
     }
 
     @Override
-    public View getView(int i, View view, ViewGroup viewGroup) {
-        Layer layer = (Layer)getItem(i);
-        View v = inflater.inflate(R.layout.list_item_check, null);
-        TextView text = (TextView)v.findViewById(R.id.text);
-        Switch op = (Switch) v.findViewById(R.id.opChecked);
-        op.setTag(layer);
-        op.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener(){
+    public View getView(final int position, View convertview, ViewGroup viewGroup) {
+//        View view;
+        ViewHolder viewHolder;
+        if(convertview==null){
+            convertview = inflater.inflate(R.layout.list_item_check, null);
+            viewHolder = new ViewHolder();
+            viewHolder.textView =(TextView) convertview.findViewById(R.id.tv_text);
+            viewHolder.imageView = convertview.findViewById(R.id.iv_content);
+            viewHolder.mSwitch = (Switch) convertview.findViewById(R.id.opChecked);
+            convertview.setTag(viewHolder);
+        }else {
+//            view = convertview;
+            viewHolder = (ViewHolder) convertview.getTag();
+        }
+        final Layer layer = getItem(position);
+        if(layer instanceof GraphicsLayer || layer instanceof ArcGISLocalTiledLayer){
+            viewHolder.imageView.setVisibility(View.GONE);
+        } else {
+            if(layer.getName().equals("行政区")){
+                viewHolder.imageView.setVisibility(View.GONE);
+            } else {
+                viewHolder.imageView.setVisibility(View.VISIBLE);
+            }
+        }
+        viewHolder.mSwitch.setTag(allLayers.get(position));
+        viewHolder.mSwitch.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener(){
 
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -71,8 +79,27 @@ public class LayerVisibilityAdapter extends BaseAdapter {
                 }
             }
         });
-        text.setText(layer.getName());
-        op.setChecked(layer.isVisible());
-        return v;
+        viewHolder.imageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Layer layer = getItem(position);
+                listener.content(layer,position,layer.getName());
+            }
+        });
+        viewHolder.textView.setText(allLayers.get(position).getName());
+        viewHolder.mSwitch.setChecked(allLayers.get(position).isVisible());
+        return convertview;
+    }
+    private ContentListener listener;
+    public void setContentListener(ContentListener listener){
+        this.listener = listener;
+    }
+    public interface ContentListener{
+        void content(Layer layer, int position,String name);
+    }
+    class ViewHolder{
+        TextView textView;
+        ImageView imageView;
+        Switch mSwitch;
     }
 }
